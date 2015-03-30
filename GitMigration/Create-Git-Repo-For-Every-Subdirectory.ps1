@@ -42,6 +42,11 @@ function CreateNuSpec($destination)
 	}
 }
 
+function InstallNuGetCli($destination)
+{
+	robocopy "$scriptHome\layout" "$destination" /E
+}
+
 Get-ChildItem $pathSpec | ForEach-Object { 
 	if ($_.FullName -ne "git-migrate.ps1"){
 	
@@ -49,7 +54,8 @@ Get-ChildItem $pathSpec | ForEach-Object {
 	
 		CopyFiles($_, $newPath);
 		CreateNuSpec($newPath);
-		CreateGitRepository($_.Name, $newPath);
+		InstallNuGetCli($newPath);
+		#CreateGitRepository($_.Name, $newPath);
 		
 		# Debug - exit after first directory
 		exit 1;
