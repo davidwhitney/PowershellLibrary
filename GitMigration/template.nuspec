@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata> 
+		<id>$id$</id>
+		<version>$version$</version>
+		<authors>Euromoney | Auto-Migration | David Whitney</authors>
+		<owners>Euromoney</owners>
+		<description>ClassLibaries Migration</description> 
+		<projectUrl>https://stash.euromoneydigital.com/projects/CLASS</projectUrl>
+		<tags>ClassLibaries</tags>
+		<language>en-US</language> 
+		<frameworkAssemblies>
+		</frameworkAssemblies>
+	</metadata> 	
+	<files>
+	</files>  
+</package>
