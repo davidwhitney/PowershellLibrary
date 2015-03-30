@@ -31,6 +31,7 @@ function CreateNuSpec($destination)
 	echo "Creating NuSpec"
 	echo "Finding project files in $destination"
 	
+	# Create NuSpecs and Package commands
 	Get-ChildItem -Path $destination -Filter "*proj" -Recurse | ForEach-Object { 
 		$pathToProj = $_.FullName.Replace($_.Name, "");
 		$nameStem = $_.Name.Replace(".csproj", "").Replace(".vbproj", "");
@@ -47,6 +48,12 @@ function CreateNuSpec($destination)
 
 		echo "Created $pathToProj"
 	}
+	
+	# Create build script
+	Get-ChildItem -Path $destination -Filter "*sln" -Recurse | ForEach-Object { 
+		$msb = "C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /m:8 /p:Configuration=Release "
+		Add-Content "$destination\build.cmd" "$msb $_"
+	}
 }
 
 function InstallNuGetCli($destination)
@@ -62,7 +69,7 @@ Get-ChildItem $pathSpec | ForEach-Object {
 		CopyFiles($_, $newPath);
 		CreateNuSpec($newPath);
 		InstallNuGetCli($newPath);
-		#CreateGitRepository($_.Name, $newPath);
+		CreateGitRepository($_.Name, $newPath);
 		
 		# Debug - exit after first directory
 		exit 1;
