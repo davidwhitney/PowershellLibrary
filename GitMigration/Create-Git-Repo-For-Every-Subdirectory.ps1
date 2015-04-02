@@ -1,5 +1,3 @@
-# Get-ChildItem -Recurse | ?{ $_.PSIsContainer } | ForEach-Object {   
-
 $invocation = (Get-Variable MyInvocation).Value
 $scriptHome = Split-Path $invocation.MyCommand.Path
 
@@ -55,23 +53,74 @@ function CreateNuSpec($destination)
 		Add-Content "$destination\build.cmd" "$msb $_"
 	}
 }
+function MapExternalDependencies($destination)
+{
+	echo "Scanning for dependencies in $destination"
+    
+    $projectFiles = get-childitem "$destination" -include *proj -rec;
+
+    foreach($project in $projectFiles) 
+    {
+        $dependant = "False";
+
+        $matches = $project | select-string -Pattern "External Dependencies";
+        foreach($match in $matches)
+        {
+            if($dependant -eq "False"){
+                Write-Host $project.Name ($project.Directory);
+                $dependant = "True";
+            }
+
+            Write-Host Depends on $match.Line
+		
+            $newSln = $project.Path + ".new"
+	
+		    #$content = gc $project.Path;
+		    #$content = $content.replace(' ',' ');
+		    #sc $newSln $content;
+	
+	        # (gc c:\temp\test.txt).replace('[MYID]','MyValue')|sc c:\temp\test.txt
+		    # gc - get content
+		    # sc - set content
+        }
+
+        #break;
+	
+	}
+}
 
 function InstallNuGetCli($destination)
 {
 	robocopy "$scriptHome\layout" "$destination" /E
 }
 
-Get-ChildItem $pathSpec | ForEach-Object { 
-	if ($_.FullName -ne "git-migrate.ps1"){
-	
-		$newPath = $_.FullName.Replace($path, $targetPath);  
-	
-		CopyFiles($_, $newPath);
-		CreateNuSpec($newPath);
-		InstallNuGetCli($newPath);
-		CreateGitRepository($_.Name, $newPath);
-		
-		# Debug - exit after first directory
-		exit 1;
+function Build()
+{
+	echo "Build time!"
+	Get-ChildItem -Path $targetPath -Filter "build.cmd" -Recurse | ForEach-Object { 
+			$pathToProj = $_.FullName.Replace($_.Name, "");
+			$relativePath = $pathToProj.Replace($destination + "\", "");
+			
+			cd $pathToProj
+			cmd /c "$pathToProj\build.cmd"
 	}
 }
+
+Get-ChildItem $pathSpec | ForEach-Object { 
+	if ($_.FullName -eq "git-migrate.ps1"){
+		continue
+	}
+
+	$newPath = $_.FullName.Replace($path, $targetPath);  
+
+	CopyFiles($_, $newPath);
+	CreateNuSpec($newPath);
+	InstallNuGetCli($newPath);
+	MapExternalDependencies($newPath);
+	#CreateGitRepository($_.Name, $newPath);
+	
+	# Debug - exit after first directory
+	exit 1;
+}
+
+# Build();
