@@ -7,19 +7,21 @@ $targetPath = "C:\dev\git-svn\Class Libraries";
 
 function CopyFiles($target, $destination) 
 {
-	New-Item $newPath -ItemType Directory -ErrorAction SilentlyContinue; 
+    Write-Host Copying from "$target" to "$destination"
+
+	New-Item $destination -ItemType Directory -ErrorAction SilentlyContinue; 
 	robocopy $target $destination /E
 }
 
-function CreateGitRepository($repoName, $directory)
+function CreateGitRepository($repoName, $newPath)
 {
-	$gitRepoName = $repoName.Replace(" ", "-");
+	$gitRepoName = $repoName.Replace(" ", "-").Replace($targetPath, "").ToLower();
 		
 	cd $newPath
 	git init
 	git add .
 	git commit -m "Import"
-	git remote add origin ssh://git@stash.euromoneydigital.com:7999/winapps/$gitRepoName.git
+	git remote add origin ssh://git@stash.euromoneydigital.com:7999/class/$gitRepoName.git
 
 	cd $scriptHome
 }
@@ -55,8 +57,9 @@ function CreateNuSpec($destination)
 }
 function MapExternalDependencies($destination)
 {
-	echo "Scanning for dependencies in $destination"
-    
+	echo "Scanning for dependencies in $destination"    
+    $depPath = "C:\dev\svn\External Dependencies";
+
     $projectFiles = get-childitem "$destination" -include *proj -rec;
 
     foreach($project in $projectFiles) 
@@ -67,31 +70,26 @@ function MapExternalDependencies($destination)
         foreach($match in $matches)
         {
             if($dependant -eq "False"){
-                Write-Host $project.Name ($project.Directory);
+                Write-Host $project.Name
                 $dependant = "True";
             }
 
-            Write-Host Depends on $match.Line
-		
-            $newSln = $project.Path + ".new"
-	
-		    #$content = gc $project.Path;
-		    #$content = $content.replace(' ',' ');
-		    #sc $newSln $content;
-	
-	        # (gc c:\temp\test.txt).replace('[MYID]','MyValue')|sc c:\temp\test.txt
-		    # gc - get content
-		    # sc - set content
-        }
+            $dep = ($match.Line -replace "^.+\\External Dependencies", "").Replace("</HintPath>", "").trim();
+            $fullDep = "$depPath$dep";
 
-        #break;
-	
+            Write-Host Requires $fullDep
+            echo f | xcopy /f /y $fullDep "$destination\lib$dep"
+
+		    $content = gc $match.Path;
+		    $updatedContent = ($content -replace "^.+\\External Dependencies", "<HintPath>..\lib");	    
+            sc $match.Path $updatedContent;
+        }	
 	}
 }
 
 function InstallNuGetCli($destination)
 {
-	robocopy "$scriptHome\layout" "$destination" /E
+	robocopy "$scriptHome\layout" "$destination" /E /NFL /NDL /NJH /NJS
 }
 
 function Build()
@@ -113,14 +111,14 @@ Get-ChildItem $pathSpec | ForEach-Object {
 
 	$newPath = $_.FullName.Replace($path, $targetPath);  
 
-	CopyFiles($_, $newPath);
-	CreateNuSpec($newPath);
-	InstallNuGetCli($newPath);
-	MapExternalDependencies($newPath);
-	#CreateGitRepository($_.Name, $newPath);
+	CopyFiles "$_" "$newPath";
+	CreateNuSpec $newPath;
+	InstallNuGetCli $newPath;
+	MapExternalDependencies $newPath;
+	CreateGitRepository $_.Name "$newPath";
 	
 	# Debug - exit after first directory
-	exit 1;
+	#exit 1;
 }
 
 # Build();
